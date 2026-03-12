@@ -1,0 +1,72 @@
+# Task 09 - Rollouts & Updates
+# Perform rolling updates to a Deployment and rollback to a previous version.
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rollout-demo
+  namespace: k8s-lab
+  labels:
+    app: rollout-demo
+    task: "09-rollouts"
+  annotations:
+    kubernetes.io/change-cause: "Initial deployment — nginx v1.24"
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: rollout-demo
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1         # Max Pods above desired count during update
+      maxUnavailable: 1   # Max Pods that can be unavailable during update
+  template:
+    metadata:
+      labels:
+        app: rollout-demo
+        version: "v1"
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.24-alpine      # ← v1: start here
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+
+---
+# Service to keep traffic flowing during the rollout
+apiVersion: v1
+kind: Service
+metadata:
+  name: rollout-demo-svc
+  namespace: k8s-lab
+  labels:
+    task: "09-rollouts"
+spec:
+  selector:
+    app: rollout-demo
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP

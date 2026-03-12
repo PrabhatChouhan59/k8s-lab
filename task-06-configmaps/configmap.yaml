@@ -1,0 +1,108 @@
+# Task 06 - ConfigMaps
+# Inject configuration data into Pods as environment variables and mounted files.
+
+---
+# ConfigMap: Store key-value config data and a full config file
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: k8s-lab
+  labels:
+    task: "06-configmaps"
+data:
+  # Simple key-value pairs (injected as env vars)
+  APP_ENV: "production"
+  APP_PORT: "8080"
+  LOG_LEVEL: "info"
+  MAX_CONNECTIONS: "100"
+
+  # Multi-line config file (injected as a mounted file)
+  app.properties: |
+    server.port=8080
+    server.host=0.0.0.0
+    logging.level=info
+    db.pool.size=10
+    feature.dark_mode=true
+
+  nginx.conf: |
+    server {
+      listen 80;
+      server_name localhost;
+      location / {
+        root /usr/share/nginx/html;
+        index index.html;
+      }
+      location /health {
+        return 200 'OK';
+        add_header Content-Type text/plain;
+      }
+    }
+
+---
+# Pod: Consumes the ConfigMap both as env vars and as mounted files
+apiVersion: v1
+kind: Pod
+metadata:
+  name: configmap-demo
+  namespace: k8s-lab
+  labels:
+    app: configmap-demo
+    task: "06-configmaps"
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25-alpine
+      ports:
+        - containerPort: 80
+
+      # Method 1: Inject specific keys as individual environment variables
+      env:
+        - name: APP_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: APP_ENV
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: LOG_LEVEL
+
+      # Method 2: Inject ALL keys from ConfigMap as env vars at once
+      envFrom:
+        - configMapRef:
+            name: app-config
+
+      # Method 3: Mount config files into the container filesystem
+      volumeMounts:
+        - name: config-volume
+          mountPath: /etc/app-config   # Files appear here
+          readOnly: true
+        - name: nginx-config-volume
+          mountPath: /etc/nginx/conf.d
+          readOnly: true
+
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "32Mi"
+        limits:
+          cpu: "100m"
+          memory: "64Mi"
+
+  volumes:
+    # Volume backed by the ConfigMap
+    - name: config-volume
+      configMap:
+        name: app-config
+        items:
+          - key: app.properties
+            path: app.properties   # File name inside the mountPath
+
+    - name: nginx-config-volume
+      configMap:
+        name: app-config
+        items:
+          - key: nginx.conf
+            path: default.conf

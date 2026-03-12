@@ -1,0 +1,122 @@
+# Task 10 - Logs & Debugging
+# This file contains intentionally broken and working Pods to practice debugging.
+
+---
+# ✅ Working Pod — for baseline log inspection
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-healthy
+  namespace: k8s-lab
+  labels:
+    app: debug-demo
+    status: healthy
+    task: "10-debugging"
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25-alpine
+      ports:
+        - containerPort: 80
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "32Mi"
+        limits:
+          cpu: "100m"
+          memory: "64Mi"
+
+---
+# ❌ Broken Pod 1 — Wrong image tag (ImagePullBackOff)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-bad-image
+  namespace: k8s-lab
+  labels:
+    app: debug-demo
+    status: broken
+    task: "10-debugging"
+spec:
+  containers:
+    - name: app
+      image: nginx:this-tag-does-not-exist   # Will fail: ErrImagePull / ImagePullBackOff
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "32Mi"
+        limits:
+          cpu: "100m"
+          memory: "64Mi"
+
+---
+# ❌ Broken Pod 2 — Bad command (CrashLoopBackOff)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-crashloop
+  namespace: k8s-lab
+  labels:
+    app: debug-demo
+    status: broken
+    task: "10-debugging"
+spec:
+  containers:
+    - name: app
+      image: busybox:1.36
+      command: ["sh", "-c", "echo 'Starting...'; exit 1"]  # Exits immediately with error
+      restartPolicy: Always
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "32Mi"
+        limits:
+          cpu: "100m"
+          memory: "64Mi"
+  restartPolicy: Always
+
+---
+# ❌ Broken Pod 3 — Insufficient resource request (Pending — won't schedule)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-pending
+  namespace: k8s-lab
+  labels:
+    app: debug-demo
+    status: broken
+    task: "10-debugging"
+spec:
+  containers:
+    - name: app
+      image: nginx:1.25-alpine
+      resources:
+        requests:
+          cpu: "99"        # Requests 99 CPUs — no Node can satisfy this
+          memory: "200Gi"  # Requests 200GB RAM — no Node can satisfy this
+        limits:
+          cpu: "100"
+          memory: "200Gi"
+
+---
+# 🛠 Debug Pod — ephemeral container for troubleshooting inside the cluster
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-toolbox
+  namespace: k8s-lab
+  labels:
+    app: debug-toolbox
+    task: "10-debugging"
+spec:
+  containers:
+    - name: toolbox
+      image: nicolaka/netshoot   # Swiss-army knife: curl, dig, ping, nmap, tcpdump, etc.
+      command: ["sleep", "3600"]
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"

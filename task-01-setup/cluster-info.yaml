@@ -1,0 +1,30 @@
+# Task 01 - Kubernetes Setup & CLI Basics
+# This file is used to verify your cluster is running correctly.
+# Apply it after setting up Kind + kubectl.
+
+---
+# A simple Namespace to verify cluster API is accepting resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: k8s-lab
+  labels:
+    purpose: learning
+    task: "01-setup"
+
+---
+# A test Pod to confirm scheduling works end-to-end
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hello-k8s
+  namespace: k8s-lab
+  labels:
+    app: hello-k8s
+    task: "01-setup"
+spec:
+  containers:
+    - name: hello
+      image: busybox:1.36
+      command: ["sh", "-c", "echo '✅ Kubernetes is working!' && sleep 30"]
+  restartPolicy: Never

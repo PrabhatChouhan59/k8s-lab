@@ -1,0 +1,113 @@
+# Task 05 - Labels, Selectors & Annotations
+# Demonstrate organizing resources with labels, filtering with selectors,
+# and storing metadata with annotations.
+
+---
+# Pod: Production tier
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-prod
+  namespace: k8s-lab
+  labels:
+    app: webapp
+    env: production
+    tier: frontend
+    version: "2.0"
+    team: platform
+  annotations:
+    contact: "platform-team@company.com"
+    docs: "https://wiki.company.com/webapp"
+    last-reviewed: "2025-01-15"
+    description: "Production frontend — handle with care"
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.25-alpine
+      ports:
+        - containerPort: 80
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "64Mi"
+        limits:
+          cpu: "200m"
+          memory: "128Mi"
+
+---
+# Pod: Staging tier
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-staging
+  namespace: k8s-lab
+  labels:
+    app: webapp
+    env: staging
+    tier: frontend
+    version: "2.1-beta"
+    team: platform
+  annotations:
+    contact: "platform-team@company.com"
+    description: "Staging frontend for QA testing"
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.25-alpine
+      ports:
+        - containerPort: 80
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "32Mi"
+        limits:
+          cpu: "100m"
+          memory: "64Mi"
+
+---
+# Pod: Backend service
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-backend
+  namespace: k8s-lab
+  labels:
+    app: webapp
+    env: production
+    tier: backend
+    version: "1.5"
+    team: backend
+  annotations:
+    description: "Backend API service"
+    sla: "99.9%"
+spec:
+  containers:
+    - name: nginx
+      image: nginx:1.25-alpine
+      ports:
+        - containerPort: 80
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "64Mi"
+        limits:
+          cpu: "200m"
+          memory: "128Mi"
+
+---
+# Service using label selector to target only production frontend Pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-prod-svc
+  namespace: k8s-lab
+  labels:
+    task: "05-labels"
+spec:
+  selector:
+    app: webapp
+    env: production
+    tier: frontend
+  ports:
+    - port: 80
+      targetPort: 80
